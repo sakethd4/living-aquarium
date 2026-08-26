@@ -48,6 +48,8 @@ function drawFish() {
 function moveFish() {
   for (let i = 0; i < 20; i++) {
     fishies[i].turnRate += (Math.random() - 0.5) * 0.005;
+    let neighbors = getNeighbors(fishies[i], fishies, 100);
+    seperation(fishies[i], neighbors);
     fishies[i].turnRate = Math.max(-0.01, Math.min(0.01, fishies[i].turnRate));
     fishies[i].heading += fishies[i].turnRate;
     fishies[i].speed += (Math.random() - 0.5) * 0.1;
@@ -76,6 +78,35 @@ function makeFish() {
       0
     ));
   }
+}
+
+function getNeighbors(fish, allFish, radius) {
+  const neighbors = [];
+  for (let i = 0; i < allFish.length; i++) {
+    let dist = Math.sqrt((fish.x - allFish[i].x) ** 2 + (fish.y - allFish[i].y) ** 2);
+    if (dist <= radius && fish != allFish[i]) {
+      neighbors.push(allFish[i]);
+    }
+  }
+  return neighbors;
+}
+
+function seperation(fish, neighbors) {
+  let totalX = 0;
+  let totalY = 0;
+  let seperationStrength = 10 * Math.PI;
+  for (let i = 0; i < neighbors.length; i++) {
+    let pushX = fish.x - neighbors[i].x;
+    let pushY = fish.y - neighbors[i].y;
+    let dist = Math.sqrt(pushX ** 2 + pushY ** 2);
+    let normX = pushX / dist;
+    let normY = pushY / dist;
+    let weightX = Math.max(-10, Math.min(10, normX * (1 / dist)));
+    let weightY = Math.max(-10, Math.min(10, normY * (1 / dist)));
+    totalX += weightX;
+    totalY += weightY;
+  }
+  fish.turnRate += Math.atan2(totalY, totalX) / seperationStrength;
 }
 
 step();
