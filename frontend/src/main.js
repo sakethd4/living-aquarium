@@ -3,12 +3,13 @@ const ctx = canvas.getContext("2d");
 const fishies = [];
 
 class Fish {
-  constructor (x, y, vx, vy, size) {
+  constructor (x, y, size, heading, speed, turnRate) {
     this.x = x;
     this.y = y;
-    this.vx = vx;
-    this.vy = vy;
     this.size = size;
+    this.heading = heading;
+    this.speed = speed;
+    this.turnRate = turnRate;
   }
 }
 
@@ -33,7 +34,7 @@ function drawFish() {
   for (let i = 0; i < 20; i++) { 
     ctx.save();
     ctx.translate(fishies[i].x, fishies[i].y);
-    ctx.rotate(Math.atan2(fishies[i].vy, fishies[i].vx));
+    ctx.rotate(fishies[i].heading);
     ctx.beginPath();
     ctx.moveTo(fishies[i].size, 0);
     ctx.lineTo(-fishies[i].size * 0.6, fishies[i].size * 0.5);
@@ -46,33 +47,21 @@ function drawFish() {
 
 function moveFish() {
   for (let i = 0; i < 20; i++) {
-    fishies[i].vx += Math.random() - 0.5; 
-    fishies[i].vy += Math.random() - 0.5;
-    const speed = Math.sqrt(fishies[i].vx ** 2 + fishies[i].vy ** 2);
-    if (speed > 10) {
-      if (fishies[i].vx != 0) {
-        fishies[i].vx -= fishies[i].vx/speed;
-      }
-      if (fishies[i].vy != 0) {
-        fishies[i].vy -= fishies[i].vy/speed;
-      }
-    } 
-    if (speed < 3) {
-      if (fishies[i].vx != 0) {
-        fishies[i].vx += fishies[i].vx/speed;
-      }
-      if (fishies[i].vy != 0) {
-        fishies[i].vy += fishies[i].vy/speed;
-      }
-    }
+    fishies[i].turnRate += (Math.random() - 0.5) * 0.005;
+    fishies[i].turnRate = Math.max(-0.01, Math.min(0.01, fishies[i].turnRate));
+    fishies[i].heading += fishies[i].turnRate;
+    fishies[i].speed += (Math.random() - 0.5) * 0.1;
+    fishies[i].speed = Math.max(1, Math.min(4, fishies[i].speed));s
+    fishies[i].x += fishies[i].speed * Math.cos(fishies[i].heading);
+    fishies[i].y += fishies[i].speed * Math.sin(fishies[i].heading);
     if (fishies[i].x > canvas.width || fishies[i].x < 0) {
-      fishies[i].vx *= -1;
+      fishies[i].heading = Math.PI - fishies[i].heading;
+      fishies[i].x = Math.max(0, Math.min(canvas.width, fishies[i].x))
     }
     if (fishies[i].y > canvas.height || fishies[i].y < 0) {
-      fishies[i].vy *= -1;
+      fishies[i].heading = -fishies[i].heading;
+      fishies[i].y = Math.max(0, Math.min(canvas.height, fishies[i].y))
     }
-    fishies[i].x = fishies[i].x + fishies[i].vx;
-    fishies[i].y = fishies[i].y + fishies[i].vy;
   }
 }
 
@@ -81,9 +70,10 @@ function makeFish() {
     fishies.push(new Fish(
       Math.random() * canvas.width,
       Math.random() * canvas.height,
-      Math.floor(Math.random() * 20) - 10,
-      Math.floor(Math.random() * 20) - 10,
-      (Math.random() * (11 - 9)) + 9
+      (Math.random() * (11 - 9)) + 9,
+      Math.random() * 2 * Math.PI,
+      (Math.random() * (7 - 4)) + 4,
+      0
     ));
   }
 }
