@@ -51,7 +51,7 @@ function moveFish() {
     fishies[i].turnRate = Math.max(-0.01, Math.min(0.01, fishies[i].turnRate));
     fishies[i].heading += fishies[i].turnRate;
     fishies[i].speed += (Math.random() - 0.5) * 0.1;
-    fishies[i].speed = Math.max(1, Math.min(4, fishies[i].speed));s
+    fishies[i].speed = Math.max(1, Math.min(4, fishies[i].speed));
     fishies[i].x += fishies[i].speed * Math.cos(fishies[i].heading);
     fishies[i].y += fishies[i].speed * Math.sin(fishies[i].heading);
     if (fishies[i].x > canvas.width || fishies[i].x < 0) {
