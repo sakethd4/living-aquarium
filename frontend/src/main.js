@@ -2,18 +2,19 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-const FISH_COUNT = 100;
+const FISH_COUNT = 1000;
 const MIN_SIZE = 6;
 const MAX_SIZE = 16;
 
 const MIN_SPEED = 1.5;
 const MAX_SPEED = 5;
-const MAX_FORCE = 0.25;
+const MAX_FORCE = 0.4;
 const SEPARATION_RADIUS = 75;
 const WANDER_STRENGTH = 0.25;
 const MIN_FELT_DIST = 1;
 const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
-const ALIGNMENT_RADIUS = 200;
+const ALIGNMENT_RADIUS = 60;
+const CELL_SIZE = ALIGNMENT_RADIUS;
 
 
 class Fish {
@@ -89,14 +90,15 @@ function drawFish() {
 }
 
 function moveFish() {
+  const grid = buildGrid(fishies);
   for (let i = 0; i < fishies.length; i++) {
     const fish = fishies[i];
     let ax = (Math.random() - 0.5) * WANDER_STRENGTH;
     let ay = (Math.random() - 0.5) * WANDER_STRENGTH;
 
-    const neighbors = getNeighbors(fish, fishies, fish.size * SENSE_RADIUS);
+    const neighbors = getNeighbors(fish, grid, fish.size * SENSE_RADIUS);
     const sep = seperation(fish, neighbors);
-    const school = getNeighbors(fish, fishies, ALIGNMENT_RADIUS);
+    const school = getNeighbors(fish, grid, ALIGNMENT_RADIUS);
     const align = alignment(fish, school);
     const coh = cohesion(fish, school);
     ax = ax + sep.x + align.x + coh.x;
@@ -141,14 +143,26 @@ function makeFish() {
   }
 }
 
-function getNeighbors(fish, allFish, radius) {
+function getNeighbors(fish, grid, radius) {
   const neighbors = [];
-  for (let i = 0; i < allFish.length; i++) {
-    let dist = Math.sqrt((fish.x - allFish[i].x) ** 2 + (fish.y - allFish[i].y) ** 2);
-    if (dist <= radius && fish != allFish[i]) {
-      neighbors.push(allFish[i]);
+  const cellX = Math.floor(fish.x / CELL_SIZE);
+  const cellY = Math.floor(fish.y / CELL_SIZE);
+  for (let cx = cellX - 1; cx <= cellX + 1; cx++) {
+    for (let cy = cellY - 1; cy <= cellY + 1; cy++) {
+      const key = `${cx},${cy}`;
+      const fishes = grid.get(key);
+      if (fishes == undefined) {
+        continue;
+      }
+      for (let k = 0; k < fishes.length; k++)  {
+        let dist = Math.sqrt((fish.x - fishes[k].x) ** 2 + (fish.y - fishes[k].y) ** 2);
+        if (dist <= radius && fish != fishes[k]) {
+          neighbors.push(fishes[k]);
+        }    
+      }   
     }
   }
+  
   return neighbors;
 }
 
@@ -238,7 +252,20 @@ function cohesion(fish, school) {
     steerY = (steerY/mag) * MAX_FORCE;
   }
   return { x: steerX, y: steerY };
+}
 
+function buildGrid(allFish) {
+  const grid = new Map();
+  for (let i = 0; i < allFish.length; i++) {
+    let cellX = Math.floor(allFish[i].x / CELL_SIZE);
+    let cellY = Math.floor(allFish[i].y / CELL_SIZE);
+    const key = `${cellX},${cellY}`;
+    if (!grid.has(key)) {
+      grid.set(key, []);
+    }
+    grid.get(key).push(allFish[i]);
+  }
+  return grid;
 }
 
 step();
