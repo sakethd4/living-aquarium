@@ -8,13 +8,18 @@ const MAX_SIZE = 16;
 
 const MIN_SPEED = 1.5;
 const MAX_SPEED = 5;
-const MAX_FORCE = 0.4;
-const SEPARATION_RADIUS = 75;
+const MAX_FORCE = 0.3;
+const SEPARATION_RADIUS = 100;
 const WANDER_STRENGTH = 0.25;
 const MIN_FELT_DIST = 1;
 const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
 const ALIGNMENT_RADIUS = 60;
-const CELL_SIZE = ALIGNMENT_RADIUS;
+const CELL_SIZE = Math.max(ALIGNMENT_RADIUS, MAX_SIZE * SENSE_RADIUS);
+const FOV_BASELINE = 0.5;
+
+const SEPARATION_WEIGHT = 1;
+const ALIGNMENT_WEIGHT = 1;
+const COHESION_WEIGHT = 0.85;
 
 
 class Fish {
@@ -101,8 +106,8 @@ function moveFish() {
     const school = getNeighbors(fish, grid, ALIGNMENT_RADIUS);
     const align = alignment(fish, school);
     const coh = cohesion(fish, school);
-    ax = ax + sep.x + align.x + coh.x;
-    ay = ay + sep.y + align.y + coh.y;
+    ax = ax + SEPARATION_WEIGHT * sep.x + ALIGNMENT_WEIGHT * align.x + COHESION_WEIGHT * coh.x;
+    ay = ay + SEPARATION_WEIGHT * sep.y + ALIGNMENT_WEIGHT * align.y + COHESION_WEIGHT * coh.y;
 
     fish.vx += ax;
     fish.vy += ay;
@@ -225,17 +230,27 @@ function alignment(fish, school) {
 }
 
 function cohesion(fish, school) {
-  let avgX = 0;
-  let avgY = 0;
-  for (let i = 0; i < school.length; i++) {
-    avgX += school[i].x;
-    avgY += school[i].y;
-  }
   if (school.length == 0) {
     return { x: 0, y: 0 };
   }
-  avgX /= school.length;
-  avgY /= school.length;
+  const facing = Math.atan2(fish.vy, fish.vx);
+  let sumWeightedX = 0;
+  let sumWeightedY = 0;
+  let sumWeight = 0;
+  for (let i = 0; i < school.length; i++) {
+    const angleToNeighbor = Math.atan2(school[i].y - fish.y, school[i].x - fish.x);
+    const angleDiff = angleToNeighbor - facing;
+    const wrapped = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+    const weight = FOV_BASELINE + (1 - FOV_BASELINE) * Math.max(0, Math.cos(wrapped));
+    sumWeightedX += weight * school[i].x;
+    sumWeightedY += weight * school[i].y;
+    sumWeight += weight;
+  }
+  if (sumWeight == 0) {
+    return { x: 0, y: 0 };
+  }
+  const avgX = sumWeightedX / sumWeight;
+  const avgY = sumWeightedY / sumWeight;
   const dx = avgX - fish.x;
   const dy = avgY - fish.y;
   const avgDist = Math.hypot(dx, dy);
