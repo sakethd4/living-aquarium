@@ -13,6 +13,7 @@ const SEPARATION_RADIUS = 75;
 const WANDER_STRENGTH = 0.25;
 const MIN_FELT_DIST = 1;
 const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
+const ALIGNMENT_RADIUS = 200;
 
 
 class Fish {
@@ -65,8 +66,10 @@ function moveFish() {
 
     const neighbors = getNeighbors(fish, fishies, fish.size * SENSE_RADIUS);
     const sep = seperation(fish, neighbors);
-    ax += sep.x;
-    ay += sep.y;
+    const school = getNeighbors(fish, fishies, ALIGNMENT_RADIUS);
+    const align = alignment(fish, school);
+    ax = ax + sep.x + align.x;
+    ay = ay +   sep.y + align.y;
 
     fish.vx += ax;
     fish.vy += ay;
@@ -114,11 +117,6 @@ function getNeighbors(fish, allFish, radius) {
   return neighbors;
 }
 
-// Contract:
-//   in:  fish (has .x, .y, .vx, .vy), neighbors (array of nearby Fish, may be empty)
-//   out: { x, y } steering force to add into this frame's acceleration,
-//        magnitude already limited to MAX_FORCE
-// TODO: implement using the averaged, inverse-distance-weighted steering formula.
 function seperation(fish, neighbors) {
   let avgX = 0;
   let avgY = 0;
@@ -149,6 +147,31 @@ function seperation(fish, neighbors) {
     steerY = (steerY/mag) * MAX_FORCE;
   }
   
+  return { x: steerX, y: steerY };
+}
+
+function alignment(fish, school) {
+  let avgVX = 0;
+  let avgVY = 0;
+  for (let i = 0; i < school.length; i++) {
+    avgVX += school[i].vx;
+    avgVY += school[i].vy;
+  }
+  if (school.length == 0) {
+    return { x: 0, y: 0 };
+  }
+  avgVX /= school.length;
+  avgVY /= school.length;
+  const avgSpd = Math.hypot(avgVX, avgVY);
+  const normSpdX = (avgVX / avgSpd) * MAX_SPEED;
+  const normSpdY = (avgVY / avgSpd) * MAX_SPEED;
+  let steerX = normSpdX - fish.vx;
+  let steerY = normSpdY - fish.vy;
+  const mag = Math.hypot(steerX, steerY);
+  if (mag > MAX_FORCE) {
+    steerX = (steerX/mag) * MAX_FORCE;
+    steerY = (steerY/mag) * MAX_FORCE;
+  }
   return { x: steerX, y: steerY };
 }
 
