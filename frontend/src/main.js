@@ -2,9 +2,9 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-const FISH_COUNT = 500;
+const FISH_COUNT = 500  ;
 const MIN_SIZE = 6;
-const MAX_SIZE = 16;
+const MAX_SIZE = 10;
 
 const MIN_SPEED = 1.5;
 const MAX_SPEED = 5;
@@ -19,12 +19,12 @@ const FOV_BASELINE = 0.3;
 
 const SEPARATION_WEIGHT = 1;
 const ALIGNMENT_WEIGHT = 1;
-const COHESION_WEIGHT = 0.83;
+const COHESION_WEIGHT = 0.9;
 
 const HEADING_SMOOTHING = 0.15;
 
 const DEPTH_SIZE_MIN = 0.4;   
-const DEPTH_SIZE_MAX = 1;    
+const DEPTH_SIZE_MAX = 1.2;    
 const DEPTH_SPEED_MIN = 0.3;   
 const DEPTH_ALPHA_MIN = 0.25;  
 
@@ -54,10 +54,32 @@ makeFish();
 
 function step() {
   // Phase 1: render fish here.
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackground();
   drawFish();
   moveFish();
   requestAnimationFrame(step);
+}
+
+function drawBackground() {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Vertical: bright sunlit surface at the top, dark depths at the bottom.
+  const vertical = ctx.createLinearGradient(0, 0, 0, h);
+  vertical.addColorStop(0, "#3a7ea8");
+  vertical.addColorStop(1, "#000a3f");
+  ctx.fillStyle = vertical;
+  ctx.fillRect(0, 0, w, h);
+
+  // Radial: clear close to the viewer (center), murkier further out (edges).
+  const cx = w / 2;
+  const cy = h / 2;
+  const radius = Math.hypot(cx, cy);
+  const radial = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  radial.addColorStop(0, "rgba(7, 52, 97, 0)");
+  radial.addColorStop(1, "rgba(0, 58, 109, 0.85)");
+  ctx.fillStyle = radial;
+  ctx.fillRect(0, 0, w, h);
 }
 
 function drawFish() {
