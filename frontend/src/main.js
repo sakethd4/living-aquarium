@@ -6,11 +6,11 @@ const FISH_COUNT = 500  ;
 const MIN_SIZE = 6;
 const MAX_SIZE = 10;
 
-const MIN_SPEED = 1.5;
-const MAX_SPEED = 5;
+const MIN_SPEED = 0.7;
+const MAX_SPEED = 2;
 const MAX_FORCE = 0.2;
-const SEPARATION_RADIUS = 100;
-const WANDER_STRENGTH = 0.3 ;
+const SEPARATION_RADIUS = 75;
+const WANDER_STRENGTH = 0.6 ;
 const MIN_FELT_DIST = 10;
 const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
 const ALIGNMENT_RADIUS = 60;
@@ -23,6 +23,8 @@ const COHESION_WEIGHT = 0.9;
 
 const HEADING_SMOOTHING = 0.15;
 
+const VERTICAL_BIAS = 0.6;
+
 const DEPTH_SIZE_MIN = 0.4;   
 const DEPTH_SIZE_MAX = 1.2;    
 const DEPTH_SPEED_MIN = 0.3;   
@@ -30,7 +32,7 @@ const DEPTH_ALPHA_MIN = 0.25;
 
 
 class Fish {
-  constructor (x, y, vx, vy, size, color, wagPhase, depth) {
+  constructor (x, y, vx, vy, size, color, wagPhase, depth, energy) {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -39,7 +41,8 @@ class Fish {
     this.color = color;
     this.tailPhase = wagPhase;
     this.renderAngle = Math.atan2(vy, vx);
-    this.depth = depth; // 0 = far background, 1 = close foreground; visual only
+    this.depth = depth;
+    this.energy = energy;
   }
 }
 
@@ -142,6 +145,7 @@ function moveFish() {
     const coh = cohesion(fish, school);
     ax = ax + SEPARATION_WEIGHT * sep.x + ALIGNMENT_WEIGHT * align.x + COHESION_WEIGHT * coh.x;
     ay = ay + SEPARATION_WEIGHT * sep.y + ALIGNMENT_WEIGHT * align.y + COHESION_WEIGHT * coh.y;
+    ay *= VERTICAL_BIAS;
 
     fish.vx += ax;
     fish.vy += ay;
