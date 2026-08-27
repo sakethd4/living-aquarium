@@ -2,7 +2,7 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-const FISH_COUNT = 40;
+const FISH_COUNT = 100;
 const MIN_SIZE = 6;
 const MAX_SIZE = 16;
 
@@ -17,12 +17,14 @@ const ALIGNMENT_RADIUS = 200;
 
 
 class Fish {
-  constructor (x, y, vx, vy, size) {
+  constructor (x, y, vx, vy, size, color, wagPhase) {
     this.x = x;
     this.y = y;
     this.vx = vx;
     this.vy = vy;
     this.size = size;
+    this.color = color;
+    this.tailPhase = wagPhase;
   }
 }
 
@@ -45,15 +47,43 @@ function step() {
 
 function drawFish() {
   for (let i = 0; i < fishies.length; i++) {
+    const fish = fishies[i];
+    const s = fish.size;
+    const wag = Math.sin(fish.tailPhase) * 0.2;
+
     ctx.save();
-    ctx.translate(fishies[i].x, fishies[i].y);
-    ctx.rotate(Math.atan2(fishies[i].vy, fishies[i].vx));
+    ctx.translate(fish.x, fish.y);
+    ctx.rotate(Math.atan2(fish.vy, fish.vx));
+
+    // tail fin (drawn first, so the body overlaps its base) — wags side to side
+    ctx.save();
+    ctx.translate(-s * 0.6, 0);
+    ctx.rotate(wag);
     ctx.beginPath();
-    ctx.moveTo(fishies[i].size, 0);
-    ctx.lineTo(-fishies[i].size * 0.6, fishies[i].size * 0.5);
-    ctx.lineTo(-fishies[i].size * 0.6, -fishies[i].size * 0.5);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-s * 0.7, s * 0.4);
+    ctx.lineTo(-s * 0.7, -s * 0.4);
     ctx.closePath();
+    ctx.fillStyle = fish.color;
     ctx.fill();
+    ctx.restore();
+
+    // body: rounded, tapering teardrop instead of a flat-edged triangle
+    ctx.beginPath();
+    ctx.moveTo(s, 0);
+    ctx.quadraticCurveTo(s * 0.3, s * 0.6, -s * 0.6, s * 0.25);
+    ctx.quadraticCurveTo(-s * 0.9, 0, -s * 0.6, -s * 0.25);
+    ctx.quadraticCurveTo(s * 0.3, -s * 0.6, s, 0);
+    ctx.closePath();
+    ctx.fillStyle = fish.color;
+    ctx.fill();
+
+    // eye
+    ctx.beginPath();
+    ctx.arc(s * 0.45, 0, s * 0.1, 0, Math.PI * 2);
+    ctx.fillStyle = "black";
+    ctx.fill();
+
     ctx.restore();
   }
 }
@@ -84,6 +114,8 @@ function moveFish() {
       fish.vy = (fish.vy / speed) * MIN_SPEED;
     }
 
+    fish.tailPhase += speed * 0.1;
+
     fish.x += fish.vx;
     fish.y += fish.vy;
 
@@ -102,7 +134,9 @@ function makeFish() {
       Math.random() * canvas.height,
       Math.floor(Math.random() * 10) - 5,
       Math.floor(Math.random() * 10) - 5,
-      (Math.random() * (MAX_SIZE - MIN_SIZE)) + MIN_SIZE
+      (Math.random() * (MAX_SIZE - MIN_SIZE)) + MIN_SIZE,
+      `hsl(${Math.random() * 360}, 70%, 55%)`,
+      Math.random() * Math.PI * 2
     ));
   }
 }
