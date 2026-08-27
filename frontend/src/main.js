@@ -2,28 +2,35 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-const FISH_COUNT = 1000;
+const FISH_COUNT = 500;
 const MIN_SIZE = 6;
 const MAX_SIZE = 16;
 
 const MIN_SPEED = 1.5;
 const MAX_SPEED = 5;
-const MAX_FORCE = 0.3;
+const MAX_FORCE = 0.2;
 const SEPARATION_RADIUS = 100;
-const WANDER_STRENGTH = 0.25;
-const MIN_FELT_DIST = 1;
+const WANDER_STRENGTH = 0.3 ;
+const MIN_FELT_DIST = 10;
 const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
 const ALIGNMENT_RADIUS = 60;
 const CELL_SIZE = Math.max(ALIGNMENT_RADIUS, MAX_SIZE * SENSE_RADIUS);
-const FOV_BASELINE = 0.5;
+const FOV_BASELINE = 0.3;
 
 const SEPARATION_WEIGHT = 1;
 const ALIGNMENT_WEIGHT = 1;
-const COHESION_WEIGHT = 0.85;
+const COHESION_WEIGHT = 0.83;
+
+const HEADING_SMOOTHING = 0.15;
+
+const DEPTH_SIZE_MIN = 0.4;   
+const DEPTH_SIZE_MAX = 1;    
+const DEPTH_SPEED_MIN = 0.3;   
+const DEPTH_ALPHA_MIN = 0.25;  
 
 
 class Fish {
-  constructor (x, y, vx, vy, size, color, wagPhase) {
+  constructor (x, y, vx, vy, size, color, wagPhase, depth) {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -31,6 +38,8 @@ class Fish {
     this.size = size;
     this.color = color;
     this.tailPhase = wagPhase;
+    this.renderAngle = Math.atan2(vy, vx);
+    this.depth = depth; // 0 = far background, 1 = close foreground; visual only
   }
 }
 
@@ -52,14 +61,17 @@ function step() {
 }
 
 function drawFish() {
+  fishies.sort((a, b) => a.depth - b.depth); // draw far fish first so near fish occlude them
   for (let i = 0; i < fishies.length; i++) {
     const fish = fishies[i];
-    const s = fish.size;
+    const depthScale = DEPTH_SIZE_MIN + (DEPTH_SIZE_MAX - DEPTH_SIZE_MIN) * fish.depth;
+    const s = fish.size * depthScale;
     const wag = Math.sin(fish.tailPhase) * 0.2;
 
     ctx.save();
+    ctx.globalAlpha = DEPTH_ALPHA_MIN + (1 - DEPTH_ALPHA_MIN) * fish.depth;
     ctx.translate(fish.x, fish.y);
-    ctx.rotate(Math.atan2(fish.vy, fish.vx));
+    ctx.rotate(fish.renderAngle);
 
     // tail fin (drawn first, so the body overlaps its base) — wags side to side
     ctx.save();
@@ -112,16 +124,24 @@ function moveFish() {
     fish.vx += ax;
     fish.vy += ay;
 
+    const depthSpeedScale = DEPTH_SPEED_MIN + (1 - DEPTH_SPEED_MIN) * fish.depth;
+    const fishMaxSpeed = MAX_SPEED * depthSpeedScale;
+    const fishMinSpeed = MIN_SPEED * depthSpeedScale;
+
     const speed = Math.hypot(fish.vx, fish.vy);
-    if (speed > MAX_SPEED) {
-      fish.vx = (fish.vx / speed) * MAX_SPEED;
-      fish.vy = (fish.vy / speed) * MAX_SPEED;
-    } else if (speed > 0 && speed < MIN_SPEED) {
-      fish.vx = (fish.vx / speed) * MIN_SPEED;
-      fish.vy = (fish.vy / speed) * MIN_SPEED;
+    if (speed > fishMaxSpeed) {
+      fish.vx = (fish.vx / speed) * fishMaxSpeed;
+      fish.vy = (fish.vy / speed) * fishMaxSpeed;
+    } else if (speed > 0 && speed < fishMinSpeed) {
+      fish.vx = (fish.vx / speed) * fishMinSpeed;
+      fish.vy = (fish.vy / speed) * fishMinSpeed;
     }
 
     fish.tailPhase += speed * 0.1;
+
+    const targetAngle = Math.atan2(fish.vy, fish.vx);
+    const angleDiff = Math.atan2(Math.sin(targetAngle - fish.renderAngle), Math.cos(targetAngle - fish.renderAngle));
+    fish.renderAngle += angleDiff * HEADING_SMOOTHING;
 
     fish.x += fish.vx;
     fish.y += fish.vy;
@@ -143,7 +163,8 @@ function makeFish() {
       Math.floor(Math.random() * 10) - 5,
       (Math.random() * (MAX_SIZE - MIN_SIZE)) + MIN_SIZE,
       `hsl(${Math.random() * 360}, 70%, 55%)`,
-      Math.random() * Math.PI * 2
+      Math.random() * Math.PI * 2,
+      Math.random()
     ));
   }
 }
