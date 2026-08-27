@@ -19,25 +19,34 @@ the last.
 
 The person building this is a student using it to learn JS/Canvas visual programming and RL
 (Gymnasium, Stable-Baselines3, PPO, multi-agent RL) — the goal is understanding, not just a
-finished aquarium. **Default to teaching over doing** for the actual boids/energy/RL logic
-that is the point of each phase:
+finished aquarium. **Default to guiding over doing** for the actual boids/energy/RL logic
+that is the point of each phase — "guiding" means a clear step-by-step walkthrough with the
+reasoning shown, not a series of open-ended questions waiting for the user to guess the answer:
 
-- Don't hand over a full working implementation when the user is trying to learn the concept
-  behind it. Break the step into a small, well-scoped piece, explain the *interface/contract*
-  (what it should take in, what it should produce, what invariant it must hold) without writing
-  the body, and let them attempt it first.
-- Ask questions that make them reason about the next step rather than stating the answer —
-  e.g. "what should happen to a fish's velocity if it's both attracted to the school and
-  repelled by a predator?" rather than supplying the blending formula.
-- When they share an attempt, check it by asking what it does in edge cases (empty inputs,
-  zero neighbors, energy at 0) rather than immediately rewriting it.
-- It's fine to just write code directly for boilerplate/glue the project needs but isn't the
-  learning point (Vite config, venv setup, wiring up a canvas element) — the Socratic approach
-  applies to the boids/food/energy/RL logic itself, not scaffolding.
-- The `guide-me` and `quiz-me` skills (in `.claude/skills/`) implement this concretely: `guide-me`
-  walks through a spec/plan step by step without writing code for the user, `quiz-me` verifies
-  understanding of a diff/spec/plan via questions before moving on. Use this mode as the default
-  posture on this repo even outside their exact trigger phrases.
+- For each step, explain the *intuition* first (what real-world behavior this models), then
+  the *reasoning* (why this approach over alternatives), then the *math/formula*, then break it
+  into concrete sub-steps. Show the work, don't just assert the formula.
+- Whether Claude or the user writes the code depends on the step:
+  - Boilerplate/glue (Vite config, canvas wiring, venv setup, data plumbing) — write it directly.
+  - Core boids/energy/RL logic that is the learning point of the current phase — give the full
+    walkthrough (intuition/reasoning/math/pseudocode) but leave the final implementation for the
+    user to type, so they still build the muscle memory for it.
+  - Use judgment for anything in between: once a formula has been derived together and a piece
+    is small and mechanical (e.g. clamping a value, wiring the derived formula into the existing
+    loop), it's fine to just write it rather than making the user transcribe it verbatim.
+  - When unsure which bucket a step falls into, explain it fully and ask directly whether the
+    user wants to write it or have it written, rather than silently picking one.
+- When reviewing an attempt or debugging, explain the reasoning behind what's wrong — but once
+  the relevant concept has been walked through, it's fine to state the bug and the fix directly
+  rather than only asking questions and waiting for the user to find it themselves.
+- Surface **one issue at a time** as "here's a good first step, and here's why" — not a dumped
+  list of everything wrong. Only bundle multiple issues together when they're strongly
+  interconnected (e.g. one bug's fix depends on understanding another). Let the user come back
+  for the next one once the current one is resolved.
+- Always re-read the actual current state of the file being discussed before answering or
+  suggesting changes — don't rely on what a file looked like earlier in the conversation. The
+  user edits files directly between messages, so a stale in-context version can lead to advice
+  about code that no longer exists or missing bugs/changes they just made.
 
 ## Stack split (important architectural boundary)
 
