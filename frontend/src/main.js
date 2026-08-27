@@ -4,12 +4,12 @@ const fishies = [];
 
 // fish stuff
 const FISH_COUNT = 500;
-const MIN_SIZE = 6;
-const MAX_SIZE = 10;
+const MIN_SIZE = 4;
+const MAX_SIZE = 8;
 const DEPTH_SIZE_MIN = 0.4;   
 const DEPTH_SIZE_MAX = 1.2;
 const MIN_ENERGY = 50;
-const MAX_ENERGY = 100;
+const MAX_ENERGY = 1000;
 const AVG_SIZE = (MAX_SIZE + MIN_SIZE) / 2;
 
 // moving a fish stuff
@@ -27,11 +27,11 @@ const FOV_BASELINE = 0.3;
 const HEADING_SMOOTHING = 0.15;
 const VERTICAL_BIAS = 0.6;
 
-const SEPARATION_WEIGHT = 1;
+const SEPARATION_WEIGHT = 0.9;
 const ALIGNMENT_WEIGHT = 1;
 const COHESION_WEIGHT = 0.9;
 
-const ENERGY_LOSS_RATE = 0.5;
+const ENERGY_LOSS_RATE = 0.1;
 
 // parallax stuff
 const DEPTH_SPEED_MIN = 0.3;
@@ -41,17 +41,17 @@ const DEPTH_ALPHA_MIN = 0.25;
 const foods = [];
 const FOOD_COUNT = 80;
 const FOOD_GROWTH_RATE = 0.002;
-const FOOD_MAX_RADIUS = 4;
+const FOOD_MAX_RADIUS = 3;
 const MOUTH_SIZE_FACTOR = 0.5;
-const REPLENISH_FACTOR = 10;
+const REPLENISH_FACTOR = 1000;
 const FOOD_SEEK_RADIUS = 150;
-const FOOD_SEEK_WEIGHT = 1;
+const FOOD_SEEK_WEIGHT = 0.5;
 
 class Food {
   constructor (x, y) {
     this.x = x;
     this.y = y;
-    this.maturity = 0; // 0 = just spawned, 1 = fully grown
+    this.maturity = 0;
   }
 }
 
@@ -171,8 +171,13 @@ function moveFish() {
     const align = alignment(fish, school);
     const coh = cohesion(fish, school);
     const seek = seekFood(fish, foods);
-    ax = ax + SEPARATION_WEIGHT * sep.x + ALIGNMENT_WEIGHT * align.x + COHESION_WEIGHT * coh.x + FOOD_SEEK_WEIGHT * seek.x;
-    ay = ay + SEPARATION_WEIGHT * sep.y + ALIGNMENT_WEIGHT * align.y + COHESION_WEIGHT * coh.y + FOOD_SEEK_WEIGHT * seek.y;
+
+    const hunger = Math.max(0, Math.min(1, 1 - fish.energy / MAX_ENERGY));
+    const dynamicCohesionWeight = Math.max(COHESION_WEIGHT * (1 - hunger), 0.8);
+    const dynamicSeekWeight = FOOD_SEEK_WEIGHT * hunger;
+
+    ax = ax + SEPARATION_WEIGHT * sep.x + ALIGNMENT_WEIGHT * align.x + dynamicCohesionWeight * coh.x + dynamicSeekWeight * seek.x;
+    ay = ay + SEPARATION_WEIGHT * sep.y + ALIGNMENT_WEIGHT * align.y + dynamicCohesionWeight * coh.y + dynamicSeekWeight * seek.y;
     ay *= VERTICAL_BIAS;
 
     fish.vx += ax;
@@ -397,12 +402,12 @@ function eatFood(fish, foods) {
     if (dist <= combinedSize && canEat) {
       fish.energy = Math.min(MAX_ENERGY, fish.energy + foods[i].maturity * REPLENISH_FACTOR);
       foods[i].maturity = 0;
+      foods[i].x = Math.random() * canvas.width;
+      foods[i].y = Math.random() * canvas.height;
     }
   }
 }
 
-// Contract: returns { x, y } steering force toward the nearest edible food,
-// scaled by hunger (0 = full, no pull; 1 = starving, full pull), limited to MAX_FORCE.
 function seekFood(fish, foods) {
   let nearest = null;
   let nearestDist = FOOD_SEEK_RADIUS;
@@ -435,8 +440,7 @@ function seekFood(fish, foods) {
     steerY = (steerY / mag) * MAX_FORCE;
   }
 
-  const hunger = Math.max(0, Math.min(1, 1 - fish.energy / MAX_ENERGY));
-  return { x: steerX * hunger, y: steerY * hunger };
+  return { x: steerX, y: steerY };
 }
 
 step();
