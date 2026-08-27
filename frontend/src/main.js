@@ -2,12 +2,18 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-const MIN_SPEED = 3;
-const MAX_SPEED = 10;
-const MAX_FORCE = 0.5;       
+const FISH_COUNT = 40;
+const MIN_SIZE = 6;
+const MAX_SIZE = 16;
+
+const MIN_SPEED = 1.5;
+const MAX_SPEED = 5;
+const MAX_FORCE = 0.25;
 const SEPARATION_RADIUS = 75;
-const WANDER_STRENGTH = 0.5;
-const MIN_FELT_DIST = 1 
+const WANDER_STRENGTH = 0.25;
+const MIN_FELT_DIST = 1;
+const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
+
 
 class Fish {
   constructor (x, y, vx, vy, size) {
@@ -37,7 +43,7 @@ function step() {
 }
 
 function drawFish() {
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < fishies.length; i++) {
     ctx.save();
     ctx.translate(fishies[i].x, fishies[i].y);
     ctx.rotate(Math.atan2(fishies[i].vy, fishies[i].vx));
@@ -52,12 +58,12 @@ function drawFish() {
 }
 
 function moveFish() {
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < fishies.length; i++) {
     const fish = fishies[i];
     let ax = (Math.random() - 0.5) * WANDER_STRENGTH;
     let ay = (Math.random() - 0.5) * WANDER_STRENGTH;
 
-    const neighbors = getNeighbors(fish, fishies, SEPARATION_RADIUS);
+    const neighbors = getNeighbors(fish, fishies, fish.size * SENSE_RADIUS);
     const sep = seperation(fish, neighbors);
     ax += sep.x;
     ay += sep.y;
@@ -77,25 +83,22 @@ function moveFish() {
     fish.x += fish.vx;
     fish.y += fish.vy;
 
-    if (fish.x > canvas.width || fish.x < 0) {
-      fish.vx *= -1;
-      fish.x = Math.max(0, Math.min(canvas.width, fish.x));
-    }
-    if (fish.y > canvas.height || fish.y < 0) {
-      fish.vy *= -1;
-      fish.y = Math.max(0, Math.min(canvas.height, fish.y));
-    }
+    const margin = fish.size;
+    if (fish.x > canvas.width + margin) fish.x = -margin;
+    else if (fish.x < -margin) fish.x = canvas.width + margin;
+    if (fish.y > canvas.height + margin) fish.y = -margin;
+    else if (fish.y < -margin) fish.y = canvas.height + margin;
   }
 }
 
 function makeFish() {
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < FISH_COUNT; i++) {
     fishies.push(new Fish(
       Math.random() * canvas.width,
       Math.random() * canvas.height,
-      Math.floor(Math.random() * 20) - 10,
-      Math.floor(Math.random() * 20) - 10,
-      (Math.random() * (11 - 9)) + 9
+      Math.floor(Math.random() * 10) - 5,
+      Math.floor(Math.random() * 10) - 5,
+      (Math.random() * (MAX_SIZE - MIN_SIZE)) + MIN_SIZE
     ));
   }
 }
