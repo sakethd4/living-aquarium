@@ -68,8 +68,9 @@ function moveFish() {
     const sep = seperation(fish, neighbors);
     const school = getNeighbors(fish, fishies, ALIGNMENT_RADIUS);
     const align = alignment(fish, school);
-    ax = ax + sep.x + align.x;
-    ay = ay +   sep.y + align.y;
+    const coh = cohesion(fish, school);
+    ax = ax + sep.x + align.x + coh.x;
+    ay = ay + sep.y + align.y + coh.y;
 
     fish.vx += ax;
     fish.vy += ay;
@@ -173,6 +174,37 @@ function alignment(fish, school) {
     steerY = (steerY/mag) * MAX_FORCE;
   }
   return { x: steerX, y: steerY };
+}
+
+function cohesion(fish, school) {
+  let avgX = 0;
+  let avgY = 0;
+  for (let i = 0; i < school.length; i++) {
+    avgX += school[i].x;
+    avgY += school[i].y;
+  }
+  if (school.length == 0) {
+    return { x: 0, y: 0 };
+  }
+  avgX /= school.length;
+  avgY /= school.length;
+  const dx = avgX - fish.x;
+  const dy = avgY - fish.y;
+  const avgDist = Math.hypot(dx, dy);
+  if (avgDist == 0) {
+    return { x: 0, y: 0 };
+  }
+  const normX = (dx / avgDist) * MAX_SPEED;
+  const normY = (dy / avgDist) * MAX_SPEED;
+  let steerX = normX - fish.vx;
+  let steerY = normY - fish.vy;
+  const mag = Math.hypot(steerX, steerY);
+  if (mag > MAX_FORCE) {
+    steerX = (steerX/mag) * MAX_FORCE;
+    steerY = (steerY/mag) * MAX_FORCE;
+  }
+  return { x: steerX, y: steerY };
+
 }
 
 step();
