@@ -2,12 +2,20 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-const FISH_COUNT = 500  ;
+// fish stuff
+const FISH_COUNT = 500;
 const MIN_SIZE = 6;
 const MAX_SIZE = 10;
+const DEPTH_SIZE_MIN = 0.4;   
+const DEPTH_SIZE_MAX = 1.2;
+const MIN_ENERGY = 50;
+const MAX_ENERGY = 100;
+const AVG_SIZE = (MAX_SIZE + MIN_SIZE) / 2;
 
+// moving a fish stuff
 const MIN_SPEED = 0.7;
 const MAX_SPEED = 2;
+const AVG_SPEED = (MIN_SPEED + MAX_SPEED) / 2;
 const MAX_FORCE = 0.2;
 const SEPARATION_RADIUS = 75;
 const WANDER_STRENGTH = 0.6 ;
@@ -16,20 +24,36 @@ const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
 const ALIGNMENT_RADIUS = 60;
 const CELL_SIZE = Math.max(ALIGNMENT_RADIUS, MAX_SIZE * SENSE_RADIUS);
 const FOV_BASELINE = 0.3;
+const HEADING_SMOOTHING = 0.15;
+const VERTICAL_BIAS = 0.6;
 
 const SEPARATION_WEIGHT = 1;
 const ALIGNMENT_WEIGHT = 1;
 const COHESION_WEIGHT = 0.9;
 
-const HEADING_SMOOTHING = 0.15;
+const ENERGY_LOSS_RATE = 0.5;
 
-const VERTICAL_BIAS = 0.6;
+// parallax stuff
+const DEPTH_SPEED_MIN = 0.3;
+const DEPTH_ALPHA_MIN = 0.25;
 
-const DEPTH_SIZE_MIN = 0.4;   
-const DEPTH_SIZE_MAX = 1.2;    
-const DEPTH_SPEED_MIN = 0.3;   
-const DEPTH_ALPHA_MIN = 0.25;  
+// food stuff
+const foods = [];
+const FOOD_COUNT = 80;
+const FOOD_GROWTH_RATE = 0.002;
+const FOOD_MAX_RADIUS = 4;
+const MOUTH_SIZE_FACTOR = 0.5;
+const REPLENISH_FACTOR = 10;
+const FOOD_SEEK_RADIUS = 150;
+const FOOD_SEEK_WEIGHT = 1;
 
+class Food {
+  constructor (x, y) {
+    this.x = x;
+    this.y = y;
+    this.maturity = 0; // 0 = just spawned, 1 = fully grown
+  }
+}
 
 class Fish {
   constructor (x, y, vx, vy, size, color, wagPhase, depth, energy) {
@@ -53,13 +77,16 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 makeFish();
+makeFood();
 
 
 function step() {
   // Phase 1: render fish here.
   drawBackground();
+  drawFood();
   drawFish();
   moveFish();
+  growFood();
   requestAnimationFrame(step);
 }
 
@@ -67,14 +94,12 @@ function drawBackground() {
   const w = canvas.width;
   const h = canvas.height;
 
-  // Vertical: bright sunlit surface at the top, dark depths at the bottom.
   const vertical = ctx.createLinearGradient(0, 0, 0, h);
   vertical.addColorStop(0, "#3a7ea8");
   vertical.addColorStop(1, "#000a3f");
   ctx.fillStyle = vertical;
   ctx.fillRect(0, 0, w, h);
 
-  // Radial: clear close to the viewer (center), murkier further out (edges).
   const cx = w / 2;
   const cy = h / 2;
   const radius = Math.hypot(cx, cy);
@@ -135,6 +160,8 @@ function moveFish() {
   const grid = buildGrid(fishies);
   for (let i = 0; i < fishies.length; i++) {
     const fish = fishies[i];
+    eatFood(fish, foods);
+    fish.energy = Math.max(0, (fish.energy - ((fish.size / AVG_SIZE) + (Math.hypot(fish.vx, fish.vy) / AVG_SPEED)) * ENERGY_LOSS_RATE));
     let ax = (Math.random() - 0.5) * WANDER_STRENGTH;
     let ay = (Math.random() - 0.5) * WANDER_STRENGTH;
 
@@ -143,8 +170,9 @@ function moveFish() {
     const school = getNeighbors(fish, grid, ALIGNMENT_RADIUS);
     const align = alignment(fish, school);
     const coh = cohesion(fish, school);
-    ax = ax + SEPARATION_WEIGHT * sep.x + ALIGNMENT_WEIGHT * align.x + COHESION_WEIGHT * coh.x;
-    ay = ay + SEPARATION_WEIGHT * sep.y + ALIGNMENT_WEIGHT * align.y + COHESION_WEIGHT * coh.y;
+    const seek = seekFood(fish, foods);
+    ax = ax + SEPARATION_WEIGHT * sep.x + ALIGNMENT_WEIGHT * align.x + COHESION_WEIGHT * coh.x + FOOD_SEEK_WEIGHT * seek.x;
+    ay = ay + SEPARATION_WEIGHT * sep.y + ALIGNMENT_WEIGHT * align.y + COHESION_WEIGHT * coh.y + FOOD_SEEK_WEIGHT * seek.y;
     ay *= VERTICAL_BIAS;
 
     fish.vx += ax;
@@ -190,8 +218,35 @@ function makeFish() {
       (Math.random() * (MAX_SIZE - MIN_SIZE)) + MIN_SIZE,
       `hsl(${Math.random() * 360}, 70%, 55%)`,
       Math.random() * Math.PI * 2,
-      Math.random()
+      Math.random(),
+      (Math.random() * (MAX_ENERGY - MIN_ENERGY)) + MIN_ENERGY,
     ));
+  }
+}
+
+function makeFood() {
+  for (let i = 0; i < FOOD_COUNT; i++) {
+    foods.push(new Food(
+      Math.random() * canvas.width,
+      Math.random() * canvas.height
+    ));
+  }
+}
+
+function growFood() {
+  for (let i = 0; i < foods.length; i++) {
+    foods[i].maturity = Math.min(1, foods[i].maturity + FOOD_GROWTH_RATE);
+  }
+}
+
+function drawFood() {
+  for (let i = 0; i < foods.length; i++) {
+    const food = foods[i];
+    const radius = FOOD_MAX_RADIUS * food.maturity;
+    ctx.beginPath();
+    ctx.arc(food.x, food.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#8fd94f";
+    ctx.fill();
   }
 }
 
@@ -328,6 +383,60 @@ function buildGrid(allFish) {
     grid.get(key).push(allFish[i]);
   }
   return grid;
+}
+
+function eatFood(fish, foods) {
+  for (let i = 0; i < foods.length; i++) {
+    let foodRadius = FOOD_MAX_RADIUS * foods[i].maturity;
+    let maxBite = fish.size * MOUTH_SIZE_FACTOR;
+    let canEat = foodRadius <= maxBite ? true : false;
+    let dx = fish.x - foods[i].x;
+    let dy = fish.y - foods[i].y;
+    let dist = Math.hypot(dx, dy);
+    let combinedSize = fish.size + foodRadius;
+    if (dist <= combinedSize && canEat) {
+      fish.energy = Math.min(MAX_ENERGY, fish.energy + foods[i].maturity * REPLENISH_FACTOR);
+      foods[i].maturity = 0;
+    }
+  }
+}
+
+// Contract: returns { x, y } steering force toward the nearest edible food,
+// scaled by hunger (0 = full, no pull; 1 = starving, full pull), limited to MAX_FORCE.
+function seekFood(fish, foods) {
+  let nearest = null;
+  let nearestDist = FOOD_SEEK_RADIUS;
+  for (let i = 0; i < foods.length; i++) {
+    const foodRadius = FOOD_MAX_RADIUS * foods[i].maturity;
+    const maxBite = fish.size * MOUTH_SIZE_FACTOR;
+    if (foodRadius > maxBite) {
+      continue; // too big for this fish to eat, not worth chasing
+    }
+    const dist = Math.hypot(fish.x - foods[i].x, fish.y - foods[i].y);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearest = foods[i];
+    }
+  }
+  if (nearest == null) {
+    return { x: 0, y: 0 };
+  }
+
+  const dx = nearest.x - fish.x;
+  const dy = nearest.y - fish.y;
+  const dist = Math.hypot(dx, dy);
+  const desiredX = (dx / dist) * MAX_SPEED;
+  const desiredY = (dy / dist) * MAX_SPEED;
+  let steerX = desiredX - fish.vx;
+  let steerY = desiredY - fish.vy;
+  const mag = Math.hypot(steerX, steerY);
+  if (mag > MAX_FORCE) {
+    steerX = (steerX / mag) * MAX_FORCE;
+    steerY = (steerY / mag) * MAX_FORCE;
+  }
+
+  const hunger = Math.max(0, Math.min(1, 1 - fish.energy / MAX_ENERGY));
+  return { x: steerX * hunger, y: steerY * hunger };
 }
 
 step();
