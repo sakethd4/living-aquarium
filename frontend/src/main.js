@@ -13,7 +13,7 @@ const MAX_ENERGY = 1000;
 const AVG_SIZE = (MAX_SIZE + MIN_SIZE) / 2;
 
 // moving a fish stuff
-const MIN_SPEED = 0.7;
+const MIN_SPEED = 0.5;
 const MAX_SPEED = 2;
 const AVG_SPEED = (MIN_SPEED + MAX_SPEED) / 2;
 const MAX_FORCE = 0.2;
