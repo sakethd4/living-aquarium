@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 MAX_SPEED = 2.0
 MIN_SPEED = 0.2
 MAX_ENERGY = 1000.0
-ENERGY_LOSS_RATE = 0.5
+BASE_LOSS_RATE = 0.1
+HUNGER_RATE = 0.4
 FOOD_SEEK_RADIUS = 150.0
 CANVAS_WIDTH = 1000.0
 CANVAS_HEIGHT = 1000.0
@@ -19,7 +20,7 @@ OVERGRAZE_PENALTY = 0.3
 NUTRIENT_RECOVERY_RATE = 0.001  
 MAX_FORCE = 0.2
 FISH_SIZE = 8.0       
-                       
+SATIATION = 100       
 FOOD_MAX_RADIUS = 4.0
 REPLENISH_FACTOR = 1000.0
 MAX_STEPS = 1000
@@ -59,8 +60,9 @@ class FoodSeekEnv(gym.Env):
         self.fish_vx = None
         self.fish_vy = None
         self.fish_energy = None
-        self.foods = None  # list of Food objects
+        self.foods = None  
         self.steps_elapsed = None
+        self.last_ate = None
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -71,6 +73,7 @@ class FoodSeekEnv(gym.Env):
         self.fish_vy = 0.0
         self.fish_energy = MAX_ENERGY / 2
         self.steps_elapsed = 0
+        self.last_ate = 0
 
         self.foods = [
             Food(
@@ -137,6 +140,7 @@ class FoodSeekEnv(gym.Env):
             combined_size = FISH_SIZE + food_radius
             if dist <= combined_size:
                 self.fish_energy = min(MAX_ENERGY, self.fish_energy + food.maturity * REPLENISH_FACTOR)
+                self.last_ate = 0
                 food.maturity = 0.0
                 food.nutrients = max(0.0, food.nutrients - OVERGRAZE_PENALTY)
 
@@ -193,11 +197,15 @@ class FoodSeekEnv(gym.Env):
 
         self._grow_foods()
 
-        energy_before = self.fish_energy
-        self.fish_energy -= ENERGY_LOSS_RATE
-        self._try_eat()
         
-        reward = self.fish_energy - energy_before
+        ramp = (2/np.pi) * np.arctan(self.last_ate / SATIATION)
+        loss_rate = BASE_LOSS_RATE + HUNGER_RATE * ramp
+        self.fish_energy -= loss_rate
+        energy_before_eat = self.fish_energy
+        self._try_eat()
+        gained = self.fish_energy - energy_before_eat
+        self.last_ate += 1     
+        reward = -loss_rate + gained * ramp
 
         self.steps_elapsed += 1
 
