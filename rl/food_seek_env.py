@@ -1,5 +1,6 @@
 import gymnasium as gym
 from gymnasium import spaces
+from gymnasium.envs.registration import register
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -12,7 +13,7 @@ ENERGY_LOSS_RATE = 0.5
 FOOD_SEEK_RADIUS = 150.0
 CANVAS_WIDTH = 1000.0
 CANVAS_HEIGHT = 1000.0
-FOOD_COUNT = 20
+FOOD_COUNT = 3
 FOOD_GROWTH_RATE = 0.002
 OVERGRAZE_PENALTY = 0.3     
 NUTRIENT_RECOVERY_RATE = 0.001  
@@ -84,19 +85,20 @@ class FoodSeekEnv(gym.Env):
         return observation, info
 
     def _get_obs(self):
-        nearest = None
-        nearest_dist = None
+        score = None
+        max_score = None
         for food in self.foods:
             dx = food.x - self.fish_x
             dy = food.y - self.fish_y
             dist = np.hypot(dx, dy)
-            if nearest_dist is None or dist < nearest_dist:
-                nearest = (food.x, food.y)
-                nearest_dist = dist
+            score = food.maturity / (dist + 1e-6)
+            if max_score is None or score > max_score:
+                best_food = (food.x, food.y)
+                max_score = score
 
-        dx = nearest[0] - self.fish_x
-        dy = nearest[1] - self.fish_y
-        dist = max(nearest_dist, 1e-6) 
+        dx = best_food[0] - self.fish_x
+        dy = best_food[1] - self.fish_y
+        dist = max(np.hypot(dx, dy), 1e-6) 
 
         dir_x = dx / dist
         dir_y = dy / dist
@@ -205,3 +207,8 @@ class FoodSeekEnv(gym.Env):
         observation = self._get_obs()
         info = {}
         return observation, reward, terminated, truncated, info
+
+register (
+    id="food_seek_env/fishies-v0",
+    entry_point="food_seek_env:FoodSeekEnv"
+)
