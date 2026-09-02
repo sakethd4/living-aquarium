@@ -10,7 +10,7 @@ def make_env():
 
 
 env = DummyVecEnv([make_env])
-env = VecNormalize(env, norm_obs=True, norm_reward=True)
+env = VecNormalize(env, norm_obs=True, norm_reward=False)
 
 model = PPO("MlpPolicy", env, tensorboard_log="./ppo_fishies_logs", verbose=1)
 model.learn(total_timesteps=300000)

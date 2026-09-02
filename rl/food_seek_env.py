@@ -14,16 +14,16 @@ HUNGER_RATE = 0.4
 FOOD_SEEK_RADIUS = 150.0
 CANVAS_WIDTH = 1000.0
 CANVAS_HEIGHT = 1000.0
-FOOD_COUNT = 3
-FOOD_GROWTH_RATE = 0.002
-OVERGRAZE_PENALTY = 0.3     
+FOOD_COUNT = 1
+FOOD_GROWTH_RATE = .001
+OVERGRAZE_PENALTY = 0.5     
 NUTRIENT_RECOVERY_RATE = 0.001  
 MAX_FORCE = 0.2
 FISH_SIZE = 8.0       
 SATIATION = 100       
 FOOD_MAX_RADIUS = 4.0
-REPLENISH_FACTOR = 1000.0
-MAX_STEPS = 1000
+REPLENISH_FACTOR = 500.0
+MAX_STEPS = 3000
 
 
 class Food:
@@ -205,7 +205,7 @@ class FoodSeekEnv(gym.Env):
         self._try_eat()
         gained = self.fish_energy - energy_before_eat
         self.last_ate += 1     
-        reward = -loss_rate + gained * ramp
+        reward = -loss_rate + (gained * ramp) / 6
 
         self.steps_elapsed += 1
 
