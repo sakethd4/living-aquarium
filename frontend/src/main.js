@@ -4,8 +4,9 @@ const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
-// fish stuff
-const FISH_COUNT = 500;
+// fish stuff (counts are derived from canvas area + shared density, see makeFood/makeFish)
+const FISH_PER_PATCH = config.density.fish_per_patch;
+const PATCHES_PER_MEGAPIXEL = config.density.patches_per_megapixel;
 const MIN_SIZE = config.physics.min_size;
 const MAX_SIZE = config.physics.max_size;
 const DEPTH_SIZE_MIN = 0.4;
@@ -41,7 +42,6 @@ const DEPTH_ALPHA_MIN = 0.25;
 
 // food stuff
 const foods = [];
-const FOOD_COUNT = 80;
 const FOOD_GROWTH_RATE = config.food.growth_rate;
 const FOOD_MAX_RADIUS = config.food.max_radius;
 const MOUTH_SIZE_FACTOR = 0.5;
@@ -78,8 +78,8 @@ function resize() {
 }
 window.addEventListener("resize", resize);
 resize();
+makeFood();   // before makeFish: the fish count is derived from the patch count
 makeFish();
-makeFood();
 
 
 function step() {
@@ -216,7 +216,8 @@ function moveFish() {
 }
 
 function makeFish() {
-  for (let i = 0; i < FISH_COUNT; i++) {
+  const fishCount = Math.round(foods.length * FISH_PER_PATCH);
+  for (let i = 0; i < fishCount; i++) {
     fishies.push(new Fish(
       Math.random() * canvas.width,
       Math.random() * canvas.height,
@@ -232,7 +233,9 @@ function makeFish() {
 }
 
 function makeFood() {
-  for (let i = 0; i < FOOD_COUNT; i++) {
+  const megapixels = (canvas.width * canvas.height) / 1e6;
+  const foodCount = Math.round(megapixels * PATCHES_PER_MEGAPIXEL);
+  for (let i = 0; i < foodCount; i++) {
     foods.push(new Food(
       Math.random() * canvas.width,
       Math.random() * canvas.height

@@ -13,8 +13,6 @@ import numpy as np
 from config import cfg
 from food_seek_env import (
     Food,
-    CANVAS_WIDTH,
-    CANVAS_HEIGHT,
     FOOD_GROWTH_RATE,
     NUTRIENT_RECOVERY_RATE,
     OVERGRAZE_PENALTY,
@@ -38,15 +36,20 @@ SEPARATION_WEIGHT = cfg["separation"]["weight"]
 MIN_FELT_DIST = cfg["separation"]["min_felt_dist"]
 OTHER_FISH_RADIUS = 2 * SEPARATION_RADIUS   # beyond this, "nobody close"
 
-NUM_FISH = 8
+# Group-world scenario. FOOD_COUNT is the one size knob (Python only); the world's
+# area and the fish count are derived from the shared density, so the policy trains
+# at the same local crowding the JS sim has (fish per patch, patches per area).
+FOOD_COUNT = 4
+NUM_FISH = round(FOOD_COUNT * cfg["density"]["fish_per_patch"])
+_world_megapixels = FOOD_COUNT / cfg["density"]["patches_per_megapixel"]
+WORLD_WIDTH = WORLD_HEIGHT = (_world_megapixels ** 0.5) * 1000.0
+
 # Divisor on the eating term. Chosen so an average eating cycle nets ~0 reward:
 # REPLENISH * 0.7 maturity * 0.5 ramp / (avg_loss * SATIATION) ~= 11.7. Re-derive if
 # replenish_factor or the energy constants in shared/sim_config.json change.
 REWARD_SCALE = 12.0
 OBS_DIM = 10         # 6 food/self + 3 nearest-other-fish + 1 target-patch nutrients
 
-# Group-world scenario: how many patches the fish compete over (Python only).
-FOOD_COUNT = 4
 # A patch below this maturity is a sprout: biting it gains almost nothing but
 # would still reset it and dock its nutrients, so it can't be eaten until it grows.
 MIN_EDIBLE_MATURITY = cfg["food"]["min_edible_maturity"]
@@ -74,8 +77,8 @@ class FishWorld:
     # ---------------------------------------------------------------- setup
     def _random_fish(self):
         return Fish(
-            self.rng.uniform(0, CANVAS_WIDTH),
-            self.rng.uniform(0, CANVAS_HEIGHT),
+            self.rng.uniform(0, WORLD_WIDTH),
+            self.rng.uniform(0, WORLD_HEIGHT),
         )
 
     def reset(self, seed=None):
@@ -85,8 +88,8 @@ class FishWorld:
         self.fish = [self._random_fish() for _ in range(self.num_fish)]
         self.foods = [
             Food(
-                self.rng.uniform(0, CANVAS_WIDTH),
-                self.rng.uniform(0, CANVAS_HEIGHT),
+                self.rng.uniform(0, WORLD_WIDTH),
+                self.rng.uniform(0, WORLD_HEIGHT),
             )
             for _ in range(FOOD_COUNT)
         ]
@@ -211,8 +214,8 @@ class FishWorld:
             fish.vx = (fish.vx / speed) * MIN_SPEED
             fish.vy = (fish.vy / speed) * MIN_SPEED
 
-        fish.x = (fish.x + fish.vx) % CANVAS_WIDTH
-        fish.y = (fish.y + fish.vy) % CANVAS_HEIGHT
+        fish.x = (fish.x + fish.vx) % WORLD_WIDTH
+        fish.y = (fish.y + fish.vy) % WORLD_HEIGHT
 
     def _grow_foods(self):
         for food in self.foods:

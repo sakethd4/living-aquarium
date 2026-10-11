@@ -70,7 +70,11 @@ policies themselves are learned.
 `frontend/vite.config.js` allows the dev server to serve the parent folder) and
 `rl/config.py`. **Python is authoritative**: when the sides disagree, the values the policy
 trains on win. Derived values (averages, sense radii, cell sizes) are computed in code, not
-stored in the JSON. JS-only (rendering/parallax/boid weights) and RL-only (reward scale, fish
+stored in the JSON. Population sizes are *not* shared as raw counts: the config holds a
+`density` (fish per patch, patches per megapixel, derived from the JS sim at fullscreen
+1920x1080), and each side derives its own counts from its own world size (JS from the canvas
+area; `rl/multi_fish_world.py` from `FOOD_COUNT`, giving 25 fish on a ~322px world) so the
+policy trains at the same local crowding it will see live. JS-only (rendering/parallax/boid weights) and RL-only (reward scale, fish
 count, observation radii) constants stay in their own files. Sharing numbers does not share
 equations — the JS energy model (size/speed-based loss) still differs from the Python
 satiation curve.

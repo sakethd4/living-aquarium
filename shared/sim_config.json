@@ -2,9 +2,9 @@
   "_about": "Shared simulation constants. Read by frontend/src/main.js and rl/config.py. Python (rl/) is authoritative: if the two sides ever disagree, these values are what the policy trains on. Derived values (averages, sense radii, cell sizes) are computed in code, not stored here. Rendering-only (JS) and RL-only (Python) values live in their own files.",
 
   "physics": {
-    "min_speed": 0.5,
-    "max_speed": 2.0,
-    "max_force": 0.2,
+    "min_speed": 0.2,
+    "max_speed": 1.0,
+    "max_force": 0.1,
     "min_size": 4,
     "max_size": 8
   },
@@ -20,6 +20,12 @@
     "base_loss_rate": 0.1,
     "hunger_rate": 0.4,
     "satiation": 100
+  },
+
+  "density": {
+    "_note": "Derived from the JS sim at fullscreen 1920x1080 (2.07 megapixels): 80 patches and 500 fish. The policy only senses its local neighborhood, so training and the live sim must match these ratios, not raw counts. Each side computes its own counts from its own world size.",
+    "fish_per_patch": 6.25,
+    "patches_per_megapixel": 38.6
   },
 
   "food": {

@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecNormalize
 
-from food_seek_env import CANVAS_WIDTH, CANVAS_HEIGHT, MAX_ENERGY
-from multi_fish_world import FishWorld
+from food_seek_env import MAX_ENERGY
+from multi_fish_world import FishWorld, WORLD_WIDTH, WORLD_HEIGHT
 from multi_fish_vec_env import FishVecEnv
 
 NUM_STEPS = 3000
@@ -40,8 +40,8 @@ def main():
             obs = world.reset()
 
         ax.clear()
-        ax.set_xlim(0, CANVAS_WIDTH)
-        ax.set_ylim(0, CANVAS_HEIGHT)
+        ax.set_xlim(0, WORLD_WIDTH)
+        ax.set_ylim(0, WORLD_HEIGHT)
         ax.set_facecolor("#0a2a4a")
 
         ax.scatter(
