@@ -10,11 +10,14 @@ a fixed number of agents).
 """
 import numpy as np
 
+from config import cfg
 from food_seek_env import (
     Food,
     CANVAS_WIDTH,
     CANVAS_HEIGHT,
+    FOOD_GROWTH_RATE,
     NUTRIENT_RECOVERY_RATE,
+    OVERGRAZE_PENALTY,
     REPLENISH_FACTOR,
     FOOD_MAX_RADIUS,
     FISH_SIZE,
@@ -29,23 +32,24 @@ from food_seek_env import (
     MAX_STEPS,
 )
 
-# Separation constants mirror frontend/src/main.js - keep them in sync.
-SEPARATION_RADIUS = 75.0
-SEPARATION_WEIGHT = 0.9
-MIN_FELT_DIST = 10.0
+# Shared with the JS frontend via shared/sim_config.json.
+SEPARATION_RADIUS = cfg["separation"]["radius"]
+SEPARATION_WEIGHT = cfg["separation"]["weight"]
+MIN_FELT_DIST = cfg["separation"]["min_felt_dist"]
 OTHER_FISH_RADIUS = 2 * SEPARATION_RADIUS   # beyond this, "nobody close"
 
 NUM_FISH = 8
-REWARD_SCALE = 6.0   # divisor on the eating term, same as food_seek_env
+# Divisor on the eating term. Chosen so an average eating cycle nets ~0 reward:
+# REPLENISH * 0.7 maturity * 0.5 ramp / (avg_loss * SATIATION) ~= 11.7. Re-derive if
+# replenish_factor or the energy constants in shared/sim_config.json change.
+REWARD_SCALE = 12.0
 OBS_DIM = 10         # 6 food/self + 3 nearest-other-fish + 1 target-patch nutrients
 
-# Food supply for the group world (independent of the single-fish env's values).
+# Group-world scenario: how many patches the fish compete over (Python only).
 FOOD_COUNT = 4
-FOOD_GROWTH_RATE = 0.001
-OVERGRAZE_PENALTY = 0.5
 # A patch below this maturity is a sprout: biting it gains almost nothing but
 # would still reset it and dock its nutrients, so it can't be eaten until it grows.
-MIN_EDIBLE_MATURITY = 0.3
+MIN_EDIBLE_MATURITY = cfg["food"]["min_edible_maturity"]
 
 
 class Fish:

@@ -4,25 +4,30 @@ from gymnasium.envs.registration import register
 import numpy as np
 import matplotlib.pyplot as plt
 
-# These mirror the constants already tuned in frontend/src/main.js -
-# keep them in sync if you retune values on the JS side.
-MAX_SPEED = 2.0
-MIN_SPEED = 0.2
-MAX_ENERGY = 1000.0
-BASE_LOSS_RATE = 0.1
-HUNGER_RATE = 0.4
-FOOD_SEEK_RADIUS = 150.0
+from config import cfg
+
+# Shared with the JS frontend - edit shared/sim_config.json, not these lines.
+MIN_SPEED = cfg["physics"]["min_speed"]
+MAX_SPEED = cfg["physics"]["max_speed"]
+MAX_FORCE = cfg["physics"]["max_force"]
+FISH_SIZE = (cfg["physics"]["min_size"] + cfg["physics"]["max_size"]) / 2   # JS average size
+
+MAX_ENERGY = cfg["energy"]["max_energy"]
+BASE_LOSS_RATE = cfg["energy"]["base_loss_rate"]
+HUNGER_RATE = cfg["energy"]["hunger_rate"]
+SATIATION = cfg["energy"]["satiation"]
+
+FOOD_SEEK_RADIUS = cfg["food"]["seek_radius"]
+FOOD_MAX_RADIUS = cfg["food"]["max_radius"]
+FOOD_GROWTH_RATE = cfg["food"]["growth_rate"]
+REPLENISH_FACTOR = cfg["food"]["replenish_factor"]
+OVERGRAZE_PENALTY = cfg["food"]["overgraze_penalty"]
+NUTRIENT_RECOVERY_RATE = cfg["food"]["nutrient_recovery_rate"]
+
+# Training-world scenario (Python only)
 CANVAS_WIDTH = 1000.0
 CANVAS_HEIGHT = 1000.0
 FOOD_COUNT = 4
-FOOD_GROWTH_RATE = .001
-OVERGRAZE_PENALTY = 0.5     
-NUTRIENT_RECOVERY_RATE = 0.001  
-MAX_FORCE = 0.2
-FISH_SIZE = 8.0       
-SATIATION = 100       
-FOOD_MAX_RADIUS = 4.0
-REPLENISH_FACTOR = 500.0
 MAX_STEPS = 3000
 
 
@@ -205,7 +210,7 @@ class FoodSeekEnv(gym.Env):
         self._try_eat()
         gained = self.fish_energy - energy_before_eat
         self.last_ate += 1     
-        reward = -loss_rate + (gained * ramp) / 6
+        reward = -loss_rate + (gained * ramp) / 12
 
         self.steps_elapsed += 1
 

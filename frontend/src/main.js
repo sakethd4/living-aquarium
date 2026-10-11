@@ -1,25 +1,27 @@
+import config from "../../shared/sim_config.json";
+
 const canvas = document.getElementById("scene");
 const ctx = canvas.getContext("2d");
 const fishies = [];
 
 // fish stuff
 const FISH_COUNT = 500;
-const MIN_SIZE = 4;
-const MAX_SIZE = 8;
-const DEPTH_SIZE_MIN = 0.4;   
+const MIN_SIZE = config.physics.min_size;
+const MAX_SIZE = config.physics.max_size;
+const DEPTH_SIZE_MIN = 0.4;
 const DEPTH_SIZE_MAX = 1.2;
 const MIN_ENERGY = 50;
-const MAX_ENERGY = 1000;
+const MAX_ENERGY = config.energy.max_energy;
 const AVG_SIZE = (MAX_SIZE + MIN_SIZE) / 2;
 
 // moving a fish stuff
-const MIN_SPEED = 0.5;
-const MAX_SPEED = 2;
+const MIN_SPEED = config.physics.min_speed;
+const MAX_SPEED = config.physics.max_speed;
 const AVG_SPEED = (MIN_SPEED + MAX_SPEED) / 2;
-const MAX_FORCE = 0.2;
-const SEPARATION_RADIUS = 75;
+const MAX_FORCE = config.physics.max_force;
+const SEPARATION_RADIUS = config.separation.radius;
 const WANDER_STRENGTH = 0.6 ;
-const MIN_FELT_DIST = 10;
+const MIN_FELT_DIST = config.separation.min_felt_dist;
 const SENSE_RADIUS = SEPARATION_RADIUS / ((MIN_SIZE + MAX_SIZE) / 2);
 const ALIGNMENT_RADIUS = 60;
 const CELL_SIZE = Math.max(ALIGNMENT_RADIUS, MAX_SIZE * SENSE_RADIUS);
@@ -27,7 +29,7 @@ const FOV_BASELINE = 0.3;
 const HEADING_SMOOTHING = 0.15;
 const VERTICAL_BIAS = 0.6;
 
-const SEPARATION_WEIGHT = 0.9;
+const SEPARATION_WEIGHT = config.separation.weight;
 const ALIGNMENT_WEIGHT = 1;
 const COHESION_WEIGHT = 0.9;
 
@@ -40,11 +42,11 @@ const DEPTH_ALPHA_MIN = 0.25;
 // food stuff
 const foods = [];
 const FOOD_COUNT = 80;
-const FOOD_GROWTH_RATE = 0.002;
-const FOOD_MAX_RADIUS = 3;
+const FOOD_GROWTH_RATE = config.food.growth_rate;
+const FOOD_MAX_RADIUS = config.food.max_radius;
 const MOUTH_SIZE_FACTOR = 0.5;
-const REPLENISH_FACTOR = 1000;
-const FOOD_SEEK_RADIUS = 150;
+const REPLENISH_FACTOR = config.food.replenish_factor;
+const FOOD_SEEK_RADIUS = config.food.seek_radius;
 const FOOD_SEEK_WEIGHT = 0.5;
 
 class Food {

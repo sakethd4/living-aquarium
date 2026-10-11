@@ -64,6 +64,17 @@ training code, or training loops inside the frontend. The environment (physics, 
 growth, spawning) is meant to stay conventional/rule-based; only the fish/predator
 policies themselves are learned.
 
+**Shared config:** constants that must match between the live sim and the training world
+(speeds, steering force, separation, energy, food economy) live in
+[shared/sim_config.json](shared/sim_config.json), read by `frontend/src/main.js` (JSON import;
+`frontend/vite.config.js` allows the dev server to serve the parent folder) and
+`rl/config.py`. **Python is authoritative**: when the sides disagree, the values the policy
+trains on win. Derived values (averages, sense radii, cell sizes) are computed in code, not
+stored in the JSON. JS-only (rendering/parallax/boid weights) and RL-only (reward scale, fish
+count, observation radii) constants stay in their own files. Sharing numbers does not share
+equations — the JS energy model (size/speed-based loss) still differs from the Python
+satiation curve.
+
 ## Commands
 
 Frontend (from `frontend/`):
@@ -81,14 +92,19 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
-There is no training entrypoint, environment implementation, or test setup yet in `rl/`
-— it currently contains only `requirements.txt` (gymnasium, stable-baselines3, torch,
-numpy). This will need a Gymnasium-compatible env before any training code is useful.
+Training and viewing (from `rl/`, venv active): `python train.py` / `python watch.py`
+(single fish), `python train_group.py` / `python watch_group.py` (8 fish sharing food,
+metrics under `world/` in TensorBoard: `tensorboard --logdir ./ppo_multi_logs`). There is no
+lint or test setup.
 
 ## Current state
 
-[frontend/src/main.js](frontend/src/main.js) is a bare scaffold — canvas sizing/resize and
-an empty `requestAnimationFrame` loop, no fish/boids/energy/food/RL logic yet. That's
-intentional: Phase 1 (and beyond) is meant to be implemented by the user as a learning
-exercise, not pre-built. Treat anything described in the README as roadmap, not
-implemented behavior.
+- **Frontend** ([frontend/src/main.js](frontend/src/main.js)): boids (separation, alignment,
+  FOV-weighted cohesion), spatial-grid neighbor search, depth/parallax visuals, energy and
+  food (maturity, hunger-weighted seeking) are built. No RL inference yet.
+- **RL** (`rl/`): `food_seek_env.py` is the single-fish Gymnasium env; `multi_fish_world.py`
+  + `multi_fish_vec_env.py` are the multi-fish world (shared food, hand-coded separation,
+  nearest-fish and patch-nutrient observations, respawn on starvation) and its SB3 `VecEnv`
+  adapter (PettingZoo/SuperSuit were skipped — SuperSuit needs a C++ compiler on Windows).
+  Both use `VecNormalize(norm_obs=True, norm_reward=False)` plus `VecMonitor`/`Monitor`.
+- The inference server and frontend/RL integration are not built yet.
