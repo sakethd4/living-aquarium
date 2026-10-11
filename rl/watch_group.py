@@ -32,7 +32,7 @@ def main():
     fig, ax = plt.subplots(figsize=(6, 6))
 
     for step in range(NUM_STEPS):
-        norm_obs = vecnorm.normalize_obs(obs)          # (num_fish, 9), whole batch
+        norm_obs = vecnorm.normalize_obs(obs)          # (num_fish, OBS_DIM), whole batch
         actions, _ = model.predict(norm_obs, deterministic=True)
         obs, rewards, terminated, truncated = world.step(actions)
         deaths += int(terminated.sum())
@@ -58,7 +58,13 @@ def main():
             c=[f.energy / MAX_ENERGY for f in world.fish],
             cmap="autumn", vmin=0, vmax=1, marker=">",
         )
-        ax.set_title(f"step: {step}   starved so far: {deaths}")
+        m = world.metrics()
+        ax.set_title(
+            f"step {step}  starved {deaths}  nutrients {m['mean_nutrients']:.2f}\n"
+            f"spread {m['patch_spread']:.2f}  on-patch {m['frac_on_patch']:.2f}  "
+            f"energy {m['mean_energy']:.0f}",
+            fontsize=9,
+        )
 
         plt.pause(0.001)
 

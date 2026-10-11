@@ -14,10 +14,7 @@ from food_seek_env import (
     Food,
     CANVAS_WIDTH,
     CANVAS_HEIGHT,
-    FOOD_COUNT,
-    FOOD_GROWTH_RATE,
     NUTRIENT_RECOVERY_RATE,
-    OVERGRAZE_PENALTY,
     REPLENISH_FACTOR,
     FOOD_MAX_RADIUS,
     FISH_SIZE,
@@ -40,7 +37,15 @@ OTHER_FISH_RADIUS = 2 * SEPARATION_RADIUS   # beyond this, "nobody close"
 
 NUM_FISH = 8
 REWARD_SCALE = 6.0   # divisor on the eating term, same as food_seek_env
-OBS_DIM = 9          # 6 food/self features + 3 nearest-other-fish features
+OBS_DIM = 10         # 6 food/self + 3 nearest-other-fish + 1 target-patch nutrients
+
+# Food supply for the group world (independent of the single-fish env's values).
+FOOD_COUNT = 4
+FOOD_GROWTH_RATE = 0.001
+OVERGRAZE_PENALTY = 0.5
+# A patch below this maturity is a sprout: biting it gains almost nothing but
+# would still reset it and dock its nutrients, so it can't be eaten until it grows.
+MIN_EDIBLE_MATURITY = 0.3
 
 
 class Fish:
@@ -60,6 +65,7 @@ class FishWorld:
         self.fish = []
         self.foods = []
         self.steps_elapsed = 0
+        self.total_deaths = 0
 
     # ---------------------------------------------------------------- setup
     def _random_fish(self):
@@ -87,7 +93,7 @@ class FishWorld:
         """
         Observation for fish i, shape (OBS_DIM,), float32:
         [dir_x, dir_y, dist_norm, energy_norm, vx_norm, vy_norm,
-         other_dir_x, other_dir_y, other_dist_norm]
+         other_dir_x, other_dir_y, other_dist_norm, target_nutrients]
         """
         fish = self.fish[i]
 
@@ -100,12 +106,13 @@ class FishWorld:
             dist = np.hypot(dx, dy)
             score = food.maturity / (dist + 1e-6)
             if max_score is None or score > max_score:
-                best_food = (food.x, food.y)
+                best_food = food
                 max_score = score
 
-        dx = best_food[0] - fish.x
-        dy = best_food[1] - fish.y
+        dx = best_food.x - fish.x
+        dy = best_food.y - fish.y
         dist = max(np.hypot(dx, dy), 1e-6)
+        target_nutrients = best_food.nutrients
 
         dir_x = dx / dist
         dir_y = dy / dist
@@ -141,7 +148,7 @@ class FishWorld:
 
         return np.array(
             [dir_x, dir_y, dist_norm, energy_norm, vx_norm, vy_norm,
-             other_dir_x, other_dir_y, other_dist_norm],
+             other_dir_x, other_dir_y, other_dist_norm, target_nutrients],
             dtype=np.float32,
         )
 
@@ -212,6 +219,8 @@ class FishWorld:
         """Returns the energy actually gained (after the MAX_ENERGY clamp)."""
         gained = 0.0
         for food in self.foods:
+            if food.maturity < MIN_EDIBLE_MATURITY:
+                continue
             food_radius = FOOD_MAX_RADIUS * food.maturity
             dist = np.hypot(fish.x - food.x, fish.y - food.y)
             if dist <= FISH_SIZE + food_radius:
@@ -266,6 +275,47 @@ class FishWorld:
         for i, fish in enumerate(self.fish):
             if fish.energy <= 0:
                 terminated[i] = True
+                self.total_deaths += 1
                 self.fish[i] = self._random_fish()
 
         return self._get_all_obs(), rewards, terminated, truncated
+
+    # -------------------------------------------------------------- metrics
+    def metrics(self):
+        """
+        Behavior-level health numbers (not just reward):
+          mean_nutrients / mean_maturity : is the food surviving?
+          mean_energy                    : are the fish eating well?
+          patch_spread                   : 1 = fish spread evenly across patches,
+                                           0 = all fish crowded on one patch
+          frac_on_patch                  : fraction of fish sitting on a patch
+                                           (high = camping, low = roaming)
+          total_deaths                   : cumulative starvations
+        """
+        mean_nutrients = float(np.mean([f.nutrients for f in self.foods]))
+        mean_maturity = float(np.mean([f.maturity for f in self.foods]))
+        mean_energy = float(np.mean([f.energy for f in self.fish]))
+
+        counts = np.zeros(len(self.foods))
+        on_patch = 0
+        for fish in self.fish:
+            dists = [np.hypot(fish.x - f.x, fish.y - f.y) for f in self.foods]
+            nearest = int(np.argmin(dists))
+            counts[nearest] += 1
+            if dists[nearest] <= FISH_SIZE + FOOD_MAX_RADIUS:
+                on_patch += 1
+
+        p = counts / counts.sum()
+        p = p[p > 0]
+        entropy = float(-(p * np.log(p)).sum())
+        max_entropy = np.log(len(self.foods)) if len(self.foods) > 1 else 1.0
+        patch_spread = entropy / max_entropy
+
+        return {
+            "mean_nutrients": mean_nutrients,
+            "mean_maturity": mean_maturity,
+            "mean_energy": mean_energy,
+            "patch_spread": patch_spread,
+            "frac_on_patch": on_patch / self.num_fish,
+            "total_deaths": self.total_deaths,
+        }
