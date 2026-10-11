@@ -1,7 +1,7 @@
 """
 Multi-fish world: N fish sharing one food pool, all controlled by the same
 policy (parameter sharing). This is the plain simulation - no RL API in here.
-A thin adapter (PettingZoo / VecEnv) will wrap it later so PPO can train on it.
+multi_fish_vec_env.FishVecEnv wraps it as an SB3 VecEnv so PPO can train on it.
 
 Each step: policy steering + hand-coded separation (matching the JS sim) move
 every fish; food grows once globally; fish eat from the shared pool; a fish that
