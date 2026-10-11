@@ -2,7 +2,7 @@
   "_about": "Shared simulation constants. Read by frontend/src/main.js and rl/config.py. Python (rl/) is authoritative: if the two sides ever disagree, these values are what the policy trains on. Derived values (averages, sense radii, cell sizes) are computed in code, not stored here. Rendering-only (JS) and RL-only (Python) values live in their own files.",
 
   "physics": {
-    "min_speed": 0.2,
+    "min_speed": 0.4,
     "max_speed": 1.0,
     "max_force": 0.1,
     "min_size": 4,
@@ -33,7 +33,7 @@
     "max_radius": 3.0,
     "growth_rate": 0.002,
     "replenish_factor": 1000.0,
-    "overgraze_penalty": 0.5,
+    "overgraze_penalty": 0.25,
     "nutrient_recovery_rate": 0.001,
     "min_edible_maturity": 0.3
   }
