@@ -8,17 +8,15 @@ The JavaScript simulation has swimming fish with boids-style schooling, depth an
 
 The Python side trains fish to forage using PPO, with both single-fish and shared-world environments. In the shared world, fish compete for food, sense nearby fish and food-patch nutrients, and respawn after starvation. TensorBoard tracks training progress and ecosystem behavior.
 
-Currently on: **Phase 4 — RL prey, with training underway.** The browser still uses hand-coded behavior; running trained policies in the JavaScript simulation is the next integration step.
-
 ## JavaScript simulation
 
-<!-- Add screenshots of the JavaScript aquarium here. -->
+<img width="638" height="456" alt="image" src="https://github.com/user-attachments/assets/70e86926-7fa6-4373-8826-eec62b5ce70a" />
 
 ## Training progress
 
 TensorBoard includes PPO training metrics alongside ecosystem measures such as fish energy, food nutrients, and how fish spread across food patches.
 
-<!-- Add screenshots of the TensorBoard training and world metrics here. -->
+<img width="635" height="334" alt="image" src="https://github.com/user-attachments/assets/7e0157d2-6976-4ddc-a72e-a6439be6373b" />
 
 ## Project layout
 
